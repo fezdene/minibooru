@@ -1,0 +1,2 @@
+<?php
+define("EXTRA_EXTS", ["gallerydl_ingest","network_ops","handle_audio","handle_cbz","handle_ico","handle_image_extra","handle_pdf","handle_svg","handle_video","handle_video_extra","avatar_gravatar","avatar_post","featured","post_peek","statistics","biography","zoom_to_fit","automatic1111_tagger","notes","post_description","post_titles","tag_categories","word_filter","google_analytics","stats"]);

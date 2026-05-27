@@ -1,0 +1,144 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dockerfile.master — Culinary Heritage Archival System (FYP)
+# Master Node: media ingest, SHA-256 hashing, gallery-dl, RSYNC push
+# ─────────────────────────────────────────────────────────────────────────────
+FROM php:8.4-apache
+
+# ── System packages ───────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Database
+    sqlite3 \
+    libsqlite3-dev \
+    # RSYNC push to Mirror Node
+    rsync \
+    # SSH client (outgoing rsync to mirrors) + SSH server (mirrors pull from master)
+    openssh-client \
+    openssh-server \
+    # Network testing tools (Chapter 3.6 — throughput/latency measurement)
+    iperf3 \
+    tcpdump \
+    # gallery-dl / yt-dlp runtime
+    python3 \
+    python3-venv \
+    # Video processing — ffprobe (metadata) + ffmpeg (transcoding/thumbnails)
+    ffmpeg \
+    # PDF-to-JPG thumbnail rendering (Task 3)
+    imagemagick \
+    ghostscript \
+    # PHP GD image library build dependencies
+    libpng-dev \
+    libjpeg-dev \
+    libwebp-dev \
+    libfreetype6-dev \
+    # PHP extension build dependencies
+    libzip-dev \
+    libonig-dev \
+    # Composer runtime dependencies
+    unzip \
+    git \
+    # HTTP health-check utility
+    curl \
+    # SingleFile engine: Chromium browser + Node.js runtime
+    chromium \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── PHP extensions ────────────────────────────────────────────────────────────
+RUN docker-php-ext-configure gd \
+        --with-jpeg \
+        --with-webp \
+        --with-freetype \
+    && docker-php-ext-install -j"$(nproc)" \
+        pdo_sqlite \
+        gd \
+        exif \
+        zip \
+        mbstring
+
+# ── PHP runtime settings for Shimmie2 ────────────────────────────────────────
+RUN { \
+    echo 'upload_max_filesize = 64M'; \
+    echo 'post_max_size       = 64M'; \
+    echo 'memory_limit        = 256M'; \
+    echo 'max_execution_time  = 300'; \
+    echo 'file_uploads        = On'; \
+    } > /usr/local/etc/php/conf.d/shimmie2.ini
+
+# ── Install Composer ──────────────────────────────────────────────────────────
+RUN curl -sS https://getcomposer.org/installer \
+    | php -- --install-dir=/usr/local/bin --filename=composer
+
+# ── Install gallery-dl (isolated venv — avoids Debian's externally-managed ───
+#    Python restriction on Bookworm/Trixie)
+RUN python3 -m venv /opt/gallery-dl-venv \
+    && /opt/gallery-dl-venv/bin/pip install --upgrade pip gallery-dl yt-dlp \
+    && ln -sf /opt/gallery-dl-venv/bin/gallery-dl /usr/local/bin/gallery-dl \
+    && ln -sf /opt/gallery-dl-venv/bin/yt-dlp     /usr/local/bin/yt-dlp
+
+# ── SingleFile CLI (webpage archiver) ────────────────────────────────────────
+RUN npm install -g single-file-cli
+
+# ── Allow ImageMagick to process PDFs ────────────────────────────────────────
+# Debian ships a security policy that blocks PDF reads by default.
+# We re-enable it here because our thumbnail pipeline (Task 3) requires it.
+RUN policy=/etc/ImageMagick-6/policy.xml; \
+    [ -f "$policy" ] && \
+    sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' "$policy" \
+    || true
+
+# ── Apache configuration ──────────────────────────────────────────────────────
+RUN a2enmod rewrite headers
+
+# Override DocumentRoot from /var/www/html to /var/www/shimmie and grant
+# AllowOverride All so Shimmie2's .htaccess URL-rewriting rules are honoured.
+RUN printf '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/shimmie\n\
+    <Directory /var/www/shimmie>\n\
+        Options FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+    ErrorLog  ${APACHE_LOG_DIR}/error.log\n\
+    CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
+</VirtualHost>\n' > /etc/apache2/sites-available/000-default.conf
+
+# ── SSH client configuration ──────────────────────────────────────────────────
+# StrictHostKeyChecking disabled for the mirror — acceptable on a closed
+# internal Docker bridge.
+RUN mkdir -p /root/.ssh \
+    && chmod 700 /root/.ssh \
+    && printf 'Host mirror-node mirror-2\n\
+    User root\n\
+    IdentityFile /root/.ssh/id_archive\n\
+    StrictHostKeyChecking no\n\
+    UserKnownHostsFile /dev/null\n\
+    LogLevel ERROR\n\
+    ConnectTimeout 10\n\
+    BatchMode yes\n' > /root/.ssh/config \
+    && chmod 600 /root/.ssh/config
+
+# ── Application code ──────────────────────────────────────────────────────────
+COPY --chown=www-data:www-data . /var/www/shimmie/
+
+# Lay down the directory skeleton that Shimmie2 expects.
+# The actual data/ contents are supplied by the Docker volume at runtime.
+RUN mkdir -p \
+        /var/www/shimmie/data/images \
+        /var/www/shimmie/data/thumbs \
+        /var/www/shimmie/data/config \
+        /tmp/ingest \
+        /opt/scripts \
+    && chown -R www-data:www-data /var/www/shimmie/data \
+    && chown www-data:www-data /tmp/ingest \
+    && chmod  -R 755 /var/www/shimmie
+
+# ── PHP dependencies ──────────────────────────────────────────────────────────
+WORKDIR /var/www/shimmie
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# ── Entrypoint ────────────────────────────────────────────────────────────────
+COPY entrypoint.master.sh /entrypoint.master.sh
+RUN chmod +x /entrypoint.master.sh
+
+EXPOSE 80

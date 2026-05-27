@@ -1,0 +1,120 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dockerfile.mirror — Culinary Heritage Archival System (FYP)
+# Mirror Node: read-only replica, SSH server for RSYNC ingress, integrity audit
+# ─────────────────────────────────────────────────────────────────────────────
+FROM php:8.4-apache
+
+# ── System packages ───────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Database
+    sqlite3 \
+    libsqlite3-dev \
+    # RSYNC daemon (receives pushes from Master)
+    rsync \
+    # SSH server (authenticates the Master's RSYNC connection)
+    openssh-server \
+    # integrity_audit.py runtime (Task 5)
+    python3 \
+    # Cron daemon (schedules integrity_audit.py — every 5 min, Chapter 3.6 demo)
+    cron \
+    # Network testing tools (Chapter 3.6 — throughput/latency measurement)
+    iperf3 \
+    tcpdump \
+    # PHP GD build dependencies
+    libpng-dev \
+    libjpeg-dev \
+    libwebp-dev \
+    libfreetype6-dev \
+    # PHP extension build dependencies
+    libzip-dev \
+    libonig-dev \
+    # Composer runtime dependencies
+    unzip \
+    git \
+    # HTTP health-check utility
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── PHP extensions ────────────────────────────────────────────────────────────
+RUN docker-php-ext-configure gd \
+        --with-jpeg \
+        --with-webp \
+        --with-freetype \
+    && docker-php-ext-install -j"$(nproc)" \
+        pdo_sqlite \
+        gd \
+        exif \
+        zip \
+        mbstring
+
+# ── PHP runtime settings ──────────────────────────────────────────────────────
+RUN { \
+    echo 'memory_limit       = 256M'; \
+    echo 'max_execution_time = 300'; \
+    } > /usr/local/etc/php/conf.d/shimmie2.ini
+
+# ── Install Composer ──────────────────────────────────────────────────────────
+RUN curl -sS https://getcomposer.org/installer \
+    | php -- --install-dir=/usr/local/bin --filename=composer
+
+# ── Apache configuration ──────────────────────────────────────────────────────
+RUN a2enmod rewrite headers
+
+RUN printf '<VirtualHost *:80>\n\
+    DocumentRoot /var/www/shimmie\n\
+    <Directory /var/www/shimmie>\n\
+        Options FollowSymLinks\n\
+        AllowOverride All\n\
+        Require all granted\n\
+    </Directory>\n\
+    ErrorLog  ${APACHE_LOG_DIR}/error.log\n\
+    CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
+</VirtualHost>\n' > /etc/apache2/sites-available/000-default.conf
+
+# ── SSH server configuration ──────────────────────────────────────────────────
+# Disable password auth — only the Master's ed25519 key is accepted.
+# Root login is required because RSYNC writes to /var/www/shimmie/data/,
+# which must be chowned to www-data after the push (handled in rsync_push.sh).
+RUN mkdir -p /run/sshd /root/.ssh \
+    && chmod 700 /root/.ssh \
+    && { \
+    echo 'PermitRootLogin yes'; \
+    echo 'PubkeyAuthentication yes'; \
+    echo 'PasswordAuthentication no'; \
+    echo 'ChallengeResponseAuthentication no'; \
+    echo 'AuthorizedKeysFile .ssh/authorized_keys'; \
+    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+    } >> /etc/ssh/sshd_config
+
+# ── Audit log ─────────────────────────────────────────────────────────────────
+# Pre-create the log file so the Network Dashboard can always read it even
+# before the first audit run.
+RUN touch /var/log/rsync_audit.log \
+    && chmod 640 /var/log/rsync_audit.log
+
+# ── Application code ──────────────────────────────────────────────────────────
+COPY --chown=www-data:www-data . /var/www/shimmie/
+
+RUN mkdir -p \
+        /var/www/shimmie/data/images \
+        /var/www/shimmie/data/thumbs \
+        /var/www/shimmie/data/config \
+        /opt/scripts \
+    && chown -R www-data:www-data /var/www/shimmie/data \
+    && chmod  -R 755 /var/www/shimmie
+
+# ── PHP dependencies ──────────────────────────────────────────────────────────
+WORKDIR /var/www/shimmie
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# ── Integrity audit script ────────────────────────────────────────────────────
+COPY scripts/integrity_audit.py /opt/scripts/integrity_audit.py
+RUN chmod 700 /opt/scripts/integrity_audit.py
+
+# ── Entrypoint ────────────────────────────────────────────────────────────────
+COPY entrypoint.mirror.sh /entrypoint.mirror.sh
+RUN chmod +x /entrypoint.mirror.sh
+
+EXPOSE 80
+# Port 22 is deliberately NOT exposed to the host — SSH is only reachable from
+# the Master Node over the internal archive-net bridge.

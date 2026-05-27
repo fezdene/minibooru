@@ -1,0 +1,33 @@
+TABLE.form.image_info {
+    width: 550px;
+    max-width: 100%;
+}
+
+.image_info .edit {
+    display: block;
+}
+.image_info .view {
+    display: none;
+}
+
+.image_info.infomode-view .edit {
+    display: none;
+}
+.image_info.infomode-view .view {
+    display: block;
+}
+
+.image_info TEXTAREA {
+    min-width: 100%;
+    min-height: 3rem;
+}
+.image_info .image-info-sidebar-box {
+    vertical-align: top;
+}
+
+.post_controls FORM {
+    margin-bottom: 0.75em;
+}
+.post_controls FORM:last-child {
+    margin-bottom: 0;
+}

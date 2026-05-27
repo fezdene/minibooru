@@ -1,0 +1,66 @@
+.notes-container {
+	pointer-events: none;
+	position: absolute;
+}
+
+.notes-container .note {
+	box-sizing: border-box;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	color: black;
+	background-color: #FFE;
+	border: 1px solid #DDC;
+	overflow: hidden;
+	position: absolute;
+	opacity: 0.5;
+	z-index: 1;
+	pointer-events: auto;
+}
+/* note mouse events should be relative to the top-level note,
+ * not relative to any inner elements */
+.notes-container .note DIV {
+    pointer-events: none;
+}
+.notes-container .note.editing {
+	opacity: 1;
+	z-index: 2;
+}
+.notes-container .note.editing.dragging {
+	opacity: 0.5;
+	z-index: 2;
+}
+.notes-container .note:hover {
+	opacity: 1;
+	z-index: 3;
+}
+
+.notes-container.dragging .editor {
+    display: none;
+}
+.notes-container .editor {
+	display: grid;
+	color: black;
+	background-color: #EFE;
+	border: 1px solid #000;
+	position: absolute;
+	grid-template-columns: 1fr 1fr;
+	grid-template-areas:
+		"text text"
+		"save cancel"
+		"delete delete";
+	z-index: 4;
+	pointer-events: auto;
+}
+.notes-container .editor TEXTAREA {
+	grid-area: text;
+}
+.notes-container .editor BUTTON[value="Save"] {
+	grid-area: save;
+}
+.notes-container .editor BUTTON[value="Cancel"] {
+	grid-area: cancel;
+}
+.notes-container .editor BUTTON[value="Delete"] {
+	grid-area: delete;
+}

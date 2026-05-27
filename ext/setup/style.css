@@ -1,0 +1,49 @@
+.setupblocks {
+	column-width: 400px;
+	column-gap: 1em;
+	max-width: 1200px;
+	margin: auto;
+}
+.setupblocks > .setupblock:first-of-type { margin-top: 0; }
+
+.setupblock {
+	break-inside: avoid;
+	text-align: center;
+}
+.setupblock TEXTAREA {
+	width: 100%;
+	font-size: 0.75rem;
+	resize: vertical;
+}
+.setupblock SELECT[multiple] {
+	width: 100%;
+}
+
+.advanced_settings INPUT {
+	width: 100%;
+}
+
+#Setupmain {
+	box-shadow: none;
+}
+#Setupmain>.blockbody {
+	background: none;
+	border: none;
+	margin: 0;
+	padding: 0;
+}
+.setupblock .form {
+	width: 100%;
+}
+.setupblock .form TH {
+	font-weight: normal;
+}
+.setupblock .advanced {
+    color: var(--danger-color);
+    background: var(--danger-background);
+}
+.setupsubmit {
+	margin-top: 1em;
+	padding: 1em;
+	width: 100%;
+}

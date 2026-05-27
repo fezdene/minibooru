@@ -1,0 +1,17 @@
+SECTION#image-list {
+	box-shadow: none;
+}
+SECTION#image-list .blockbody {
+	background: none;
+	border: none;
+	padding: 0px;
+	text-align: left;
+}
+.shm-image-list {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, calc(var(--thumb-width) + 42px) );
+	place-items: center;
+}
+.shm-image-list .thumb {
+	margin-bottom: 8px;
+}

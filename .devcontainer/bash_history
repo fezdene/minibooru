@@ -1,0 +1,5 @@
+composer check
+composer format
+composer test
+composer stan
+composer docker-run

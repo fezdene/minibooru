@@ -1,0 +1,14 @@
+.bbcode {
+	overflow-wrap: anywhere;
+}
+.bbcode BLOCKQUOTE {
+	border: 1px solid black;
+	padding: 8px;
+	background: #DDD;
+}
+.bbcode .anchor A.alink {
+	visibility: hidden;
+}
+.bbcode .anchor:hover A.alink {
+	visibility: visible;
+}

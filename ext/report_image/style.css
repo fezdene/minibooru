@@ -1,0 +1,7 @@
+#reportedimage .reason {
+	max-width: 30em;
+	overflow-wrap: anywhere;
+}
+#reportedimage .formstretch INPUT {
+	width: 100%;
+}

@@ -1,0 +1,51 @@
+.comment {
+	text-align: left;
+	position: relative;
+	overflow-wrap: anywhere;
+}
+.comment IMG {
+	max-width: 100%;
+}
+.comment .info {
+	visibility: hidden;
+	text-align: center;
+	padding: var(--block-padding);
+	background: var(--block);
+	border: 1px solid var(--block-border);
+	position: absolute;
+	top: 0;
+	left: -180px;
+	width: 180px;
+	z-index: 1;
+	box-shadow: 0 0 4px #000;
+	border-radius: 4px;
+}
+.comment:hover .info {
+	visibility: visible;
+}
+
+.comment_add INPUT:not([type="checkbox"]):not([type="radio"]),
+.comment_add TEXTAREA,
+.comment_add BUTTON,
+.comment_add SELECT {
+	width: 100%;
+}
+
+#comment-list-recent .more {
+	display: block;
+	padding-top: 8px;
+}
+.comment_big_list {
+	display: flex;
+	gap: 1em;
+}
+.comment_big_list .thumb {
+	flex: 0;
+}
+.comment_big_list .comment_list {
+	flex: 1;
+	border-left: 1px solid var(--block-border);
+}
+.comment_big_list .comment {
+	margin-left: 0;
+}

@@ -1,0 +1,2 @@
+.added-tag{background:var(--added-background);}
+.deleted-tag{background:var(--removed-background);text-decoration:line-through;}

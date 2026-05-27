@@ -1,0 +1,23 @@
+vendor
+.git
+.sl
+*.phar
+data
+images
+thumbs
+*.sqlite
+Dockerfile
+
+# ── FYP Docker infrastructure (not part of the PHP application) ──────────────
+master_data/
+mirror_data/
+ssh_keys/
+docker-compose.yml
+Dockerfile.master
+Dockerfile.mirror
+# entrypoint scripts are NOT excluded — Dockerfile COPY instructions need them
+tests/
+phpunit.dist.xml
+phpstan.dist.neon
+__pycache__/
+*.pyc

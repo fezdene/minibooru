@@ -1,0 +1,55 @@
+* {
+   	box-sizing: border-box;
+}
+BODY {
+    background: #888;
+}
+
+#installer {
+	background: #EEE;
+	font-family: "Google Sans", "Product Sans", system-ui, sans-serif;
+	font-size: 14px;
+	width: 512px;
+	margin: 16px auto auto;
+	border: 1px solid black;
+	border-radius: 16px;
+	box-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+}
+#installer P {
+	margin: 1em;
+}
+#installer A {
+	text-decoration: none;
+}
+#installer A:hover {
+	text-decoration: underline;
+}
+#installer H1, #installer H3 {
+	background: #DDD;
+	text-align: center;
+	margin: 0;
+	padding: 2px;
+}
+#installer H1 {
+	border-radius: 16px 16px 0 0;
+	border-bottom: 1px solid black;
+}
+#installer H3 {
+	border-top: 1px solid black;
+	border-bottom: 1px solid black;
+}
+#installer H1 + H3 {
+    border-top: none;
+}
+
+#installer TABLE {
+    width: 20em;
+}
+#installer TH {
+	text-align: right;
+	width: 1%;
+}
+#installer INPUT,
+#installer SELECT {
+	width: 100%;
+}

@@ -1,0 +1,899 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODERNBOORU — Dashboard Theme
+   Layout: fixed top-bar + fixed left sidebar + scrollable main content area.
+   Sidebar collapses behind a CSS-only hamburger toggle on narrow screens.
+   Rule: no HTML class starting with shm- is styled or targeted here.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── Design tokens ──────────────────────────────────────────────────────── */
+:root {
+    /* Brand accent (indigo) */
+    --mb-accent:          #6366F1;
+    --mb-accent-hover:    #4F46E5;
+    --mb-accent-light:    #EEF2FF;
+    --mb-accent-text:     #4338CA;
+
+    /* Page chrome */
+    --mb-topbar-h:        56px;
+    --mb-sidebar-w:       240px;
+    --mb-page-bg:         #F1F5F9;
+    --mb-surface:         #FFFFFF;
+    --mb-border:          #E2E8F0;
+
+    /* Sidebar (dark navy) */
+    --mb-sidebar-bg:      #1E293B;
+    --mb-sidebar-text:    #94A3B8;
+    --mb-sidebar-hover:   #E2E8F0;
+    --mb-sidebar-active:  rgba(99, 102, 241, .18);
+    --mb-sidebar-accent:  #818CF8;
+
+    /* Top bar */
+    --mb-topbar-bg:       #FFFFFF;
+    --mb-topbar-border:   #E2E8F0;
+
+    /* Typography */
+    --mb-text:            #1E293B;
+    --mb-text-2:          #475569;
+    --mb-text-3:          #94A3B8;
+    --mb-link:            #6366F1;
+    --mb-link-visited:    #7C3AED;
+
+    /* Elevation */
+    --mb-shadow-sm:       0 1px 3px rgba(0,0,0,.08);
+    --mb-shadow:          0 2px 8px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.05);
+    --mb-shadow-md:       0 6px 20px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.06);
+
+    /* Shape */
+    --mb-radius:          0.5rem;
+    --mb-radius-sm:       0.375rem;
+
+    /* Semantic colours */
+    --mb-danger:          #EF4444;
+    --mb-danger-bg:       #FEF2F2;
+    --mb-warn:            #F59E0B;
+    --mb-warn-bg:         #FFFBEB;
+    --mb-success:         #22C55E;
+    --mb-success-bg:      #F0FDF4;
+
+    /* ── Shimmie2 default-theme var aliases ─────────────────────────────── *
+     * Extensions reference these tokens for zebra tables, code blocks, etc. */
+    color-scheme:         light dark;
+    --page:               var(--mb-page-bg);
+    --text:               var(--mb-text);
+    --link-default:       var(--mb-link);
+    --link-visited:       var(--mb-link-visited);
+    --block:              var(--mb-surface);
+    --block-border:       var(--mb-border);
+    --block-padding:      0.75rem;
+    --border-radius:      var(--mb-radius);
+    --header:             #F8FAFC;
+    --header-border:      var(--mb-border);
+    --title:              #F1F5F9;
+    --title-border:       var(--mb-border);
+    --zebra-border:       var(--mb-border);
+    --zebra-header:       #F8FAFC;
+    --zebra-odd:          #FFFFFF;
+    --zebra-even:         #F8FAFC;
+    --danger-color:       var(--mb-danger);
+    --danger-background:  var(--mb-danger-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --mb-accent:         #818CF8;
+        --mb-accent-hover:   #6366F1;
+        --mb-accent-light:   #1E1B4B;
+        --mb-accent-text:    #A5B4FC;
+
+        --mb-page-bg:        #0F172A;
+        --mb-surface:        #1E293B;
+        --mb-border:         #334155;
+
+        --mb-sidebar-bg:     #0A1224;
+        --mb-sidebar-text:   #64748B;
+        --mb-sidebar-hover:  #CBD5E1;
+        --mb-sidebar-active: rgba(129, 140, 248, .15);
+        --mb-sidebar-accent: #818CF8;
+
+        --mb-topbar-bg:      #1E293B;
+        --mb-topbar-border:  #334155;
+
+        --mb-text:           #E2E8F0;
+        --mb-text-2:         #94A3B8;
+        --mb-text-3:         #475569;
+        --mb-link:           #818CF8;
+        --mb-link-visited:   #A78BFA;
+
+        --mb-danger-bg:      #2D0A0A;
+        --mb-warn-bg:        #291900;
+        --mb-success-bg:     #042010;
+
+        --page:              var(--mb-page-bg);
+        --text:              var(--mb-text);
+        --block:             var(--mb-surface);
+        --block-border:      var(--mb-border);
+        --header:            #253044;
+        --header-border:     var(--mb-border);
+        --title:             #0F172A;
+        --title-border:      var(--mb-border);
+        --zebra-header:      #253044;
+        --zebra-odd:         #1E293B;
+        --zebra-even:        #243248;
+    }
+}
+
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+:root {
+    font-size: 14px;
+    font-family: "Google Sans", "Product Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+A {
+    color: var(--mb-link);
+    text-decoration: none;
+}
+A:hover { text-decoration: underline; }
+A:visited { color: var(--mb-link-visited); }
+
+H1, H2, H3, H4 {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+CODE {
+    background: var(--header);
+    border-radius: var(--mb-radius-sm);
+    padding: .1em .35em;
+    font-size: .875em;
+    color: var(--mb-text);
+}
+
+UL { text-align: left; margin: 0; padding-left: 1.25rem; }
+
+
+/* ── Dashboard scaffold ─────────────────────────────────────────────────── */
+
+BODY {
+    margin: 0;
+    padding: 0;
+    background: var(--mb-page-bg);
+    color: var(--mb-text);
+}
+
+/* The .mb-layout class is added alongside layout-* by our Page subclass.     *
+ * padding-top clears the fixed top-bar; padding-left clears the fixed        *
+ * sidebar.  Both fixed elements don't occupy normal flow, so all block-level *
+ * children (subnav, article, footer) are pushed into the correct zone.       */
+BODY.mb-layout {
+    display: block;
+    padding-top: var(--mb-topbar-h);
+    padding-left: var(--mb-sidebar-w);
+    min-height: 100vh;
+}
+
+
+/* ── Hidden checkbox — CSS-only sidebar toggle ──────────────────────────── *
+ * display:none hides it visually; :checked still fires (CSS spec §:checked). *
+ * General-sibling (~) selectors therefore work on all subsequent siblings.   */
+.mb-nav-toggle { display: none; }
+
+
+/* ── Top navigation bar ─────────────────────────────────────────────────── */
+.mb-topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--mb-topbar-h);
+    z-index: 200;
+
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 1rem;
+
+    background: var(--mb-topbar-bg);
+    border-bottom: 1px solid var(--mb-topbar-border);
+    box-shadow: var(--mb-shadow-sm);
+}
+
+/* Brand zone — occupies the same width as the sidebar */
+.mb-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: .625rem;
+    width: var(--mb-sidebar-w);
+    flex-shrink: 0;
+    padding-right: 1rem;
+    border-right: 1px solid var(--mb-border);
+}
+
+.mb-brand {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--mb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mb-brand:hover { color: var(--mb-accent); text-decoration: none; }
+
+/* Hamburger — three bars, hidden on desktop, shown on mobile */
+.mb-hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 34px;
+    height: 34px;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: var(--mb-radius-sm);
+    flex-shrink: 0;
+    transition: background .15s;
+}
+.mb-hamburger:hover { background: var(--mb-accent-light); }
+
+.mb-bar {
+    display: block;
+    height: 2px;
+    background: var(--mb-text-2);
+    border-radius: 2px;
+    transition: transform .2s ease, opacity .15s ease;
+}
+
+/* Animate bars to × when checkbox is checked */
+.mb-nav-toggle:checked ~ .mb-topbar .mb-bar:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.mb-nav-toggle:checked ~ .mb-topbar .mb-bar:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.mb-nav-toggle:checked ~ .mb-topbar .mb-bar:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+/* Primary nav links (pill style) */
+.mb-topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    flex: 1;
+    overflow: hidden;
+    padding: 0 .75rem;
+}
+
+.mb-nav-link {
+    display: inline-block;
+    padding: .3rem .75rem;
+    border-radius: 9999px;
+    font-size: .8125rem;
+    font-weight: 500;
+    color: var(--mb-text-2);
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+}
+.mb-nav-link:hover { background: var(--mb-accent-light); color: var(--mb-accent-text); text-decoration: none; }
+A.mb-nav-link--active,
+A.mb-nav-link--active:visited { background: var(--mb-accent); color: #FFF; }
+A.mb-nav-link--active:hover,
+A.mb-nav-link--active:visited:hover { background: var(--mb-accent-hover); color: #FFF; }
+
+/* User / account block (far right of top-bar) */
+.mb-topbar-user {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding-left: .75rem;
+    font-size: .8125rem;
+    color: var(--mb-text-2);
+    border-left: 1px solid var(--mb-border);
+}
+.mb-topbar-user A { color: var(--mb-text-2); }
+.mb-topbar-user A:hover { color: var(--mb-accent); }
+
+.mb-welcome {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    white-space: nowrap;
+    color: var(--mb-text-2);
+    font-size: .8125rem;
+}
+.mb-welcome-name { font-weight: 600; color: var(--mb-text); }
+.mb-welcome-name:hover { color: var(--mb-accent); text-decoration: none; }
+.mb-welcome-sep { color: var(--mb-text-3, #94A3B8); }
+.mb-welcome-logout {
+    color: var(--mb-text-3, #94A3B8);
+    font-size: .75rem;
+    padding: .15rem .5rem;
+    border: 1px solid var(--mb-border);
+    border-radius: 9999px;
+    transition: background .15s, color .15s, border-color .15s;
+}
+.mb-welcome-logout:hover {
+    background: #FEE2E2;
+    color: #DC2626;
+    border-color: #FCA5A5;
+    text-decoration: none;
+}
+
+
+/* ── Secondary sub-navigation bar ──────────────────────────────────────── *
+ * In normal flow so it clears the fixed top-bar naturally via body           *
+ * padding-top. No separate top: calculation needed.                          */
+.mb-subnav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .25rem;
+    padding: .375rem 1.25rem;
+    background: var(--mb-surface);
+    border-bottom: 1px solid var(--mb-border);
+    font-size: .8125rem;
+}
+
+.mb-subnav-link {
+    display: inline-block;
+    padding: .25rem .625rem;
+    border-radius: var(--mb-radius-sm);
+    font-weight: 500;
+    color: var(--mb-text-2);
+    transition: background .15s, color .15s;
+}
+.mb-subnav-link:hover { background: var(--mb-accent-light); color: var(--mb-accent-text); text-decoration: none; }
+.mb-subnav-link--active { color: var(--mb-accent); font-weight: 600; }
+
+
+/* ── Fixed left sidebar ─────────────────────────────────────────────────── */
+NAV.mb-sidebar {
+    position: fixed;
+    top: var(--mb-topbar-h);
+    left: 0;
+    bottom: 0;
+    width: var(--mb-sidebar-w);
+    z-index: 100;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    display: flex;
+    flex-direction: column;
+    padding: .625rem 0;
+
+    background: var(--mb-sidebar-bg);
+    border-right: 1px solid rgba(255,255,255,.05);
+
+    /* Thin custom scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: #334155 transparent;
+}
+NAV.mb-sidebar::-webkit-scrollbar       { width: 4px; }
+NAV.mb-sidebar::-webkit-scrollbar-track { background: transparent; }
+NAV.mb-sidebar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+/* Cards inside sidebar are frameless — sidebar provides the bg */
+NAV.mb-sidebar .mb-card {
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    margin: 0;
+}
+
+NAV.mb-sidebar .mb-card-title {
+    padding: .75rem 1rem .3rem;
+    background: transparent;
+    border-bottom: none;
+    font-size: .6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--mb-text-3);
+    text-align: left;
+    cursor: default;
+}
+
+NAV.mb-sidebar .mb-card-body {
+    padding: 0 .5rem .625rem;
+    background: transparent;
+    border: none;
+    font-size: .8125rem;
+}
+
+/* Generic links inside sidebar blocks */
+NAV.mb-sidebar .mb-card-body A {
+    display: block;
+    padding: .4rem .75rem;
+    border-radius: var(--mb-radius-sm);
+    color: var(--mb-sidebar-text);
+    transition: background .12s, color .12s;
+}
+NAV.mb-sidebar .mb-card-body A:hover {
+    background: rgba(255,255,255,.07);
+    color: var(--mb-sidebar-hover);
+    text-decoration: none;
+}
+NAV.mb-sidebar .mb-card-body A.current-page {
+    background: var(--mb-sidebar-active);
+    color: var(--mb-sidebar-accent);
+}
+
+/* Tag links in sidebar override the block-link style */
+NAV.mb-sidebar .tag {
+    display: inline;
+    padding: 0;
+    background: none;
+    color: var(--mb-sidebar-accent);
+}
+NAV.mb-sidebar .tag:hover { background: transparent; text-decoration: underline; }
+
+/* Tag list table in sidebar */
+NAV.mb-sidebar TABLE.tag_list TD { display: inline; padding: 0; border: none; }
+NAV.mb-sidebar TABLE.tag_list TD::after { content: " "; }
+
+/* Prev | Index | Next on one row */
+#navigation .mb-card-body {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    flex-wrap: wrap;
+    padding-bottom: .75rem;
+}
+#navigation .mb-card-body A {
+    display: inline;
+    padding: 0;
+    font-size: .8125rem;
+}
+
+/* Inline prev / index / next text in Navigation block */
+NAV.mb-sidebar .mb-card-body > span { color: var(--mb-sidebar-text); font-size: .8125rem; }
+
+/* Input fields inside sidebar (search) */
+NAV.mb-sidebar INPUT[type="text"],
+NAV.mb-sidebar INPUT[type="search"],
+NAV.mb-sidebar INPUT[type="url"],
+NAV.mb-sidebar SELECT,
+NAV.mb-sidebar TEXTAREA {
+    display: block;
+    width: 100%;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: var(--mb-radius-sm);
+    color: var(--mb-sidebar-hover);
+    padding: .4rem .625rem;
+    font-size: .8125rem;
+    outline: none;
+    transition: border-color .15s, background .15s;
+}
+NAV.mb-sidebar INPUT[type="text"]:focus,
+NAV.mb-sidebar INPUT[type="search"]:focus,
+NAV.mb-sidebar INPUT[type="url"]:focus {
+    border-color: var(--mb-sidebar-accent);
+    background: rgba(255,255,255,.12);
+}
+
+NAV.mb-sidebar INPUT[type="submit"],
+NAV.mb-sidebar INPUT[type="button"],
+NAV.mb-sidebar BUTTON {
+    display: block;
+    width: 100%;
+    margin-top: .375rem;
+    padding: .4rem .75rem;
+    background: var(--mb-accent);
+    color: #FFF;
+    border: none;
+    border-radius: var(--mb-radius-sm);
+    font-size: .8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+}
+NAV.mb-sidebar INPUT[type="submit"]:hover,
+NAV.mb-sidebar BUTTON:hover { background: var(--mb-accent-hover); }
+
+/* Checkbox/radio labels in sidebar */
+NAV.mb-sidebar LABEL { color: var(--mb-sidebar-text); font-size: .8125rem; }
+
+/* Table inputs in sidebar */
+NAV.mb-sidebar TABLE { width: 100%; }
+NAV.mb-sidebar TD, NAV.mb-sidebar TH { color: var(--mb-sidebar-text); vertical-align: top; text-align: left; }
+
+
+/* ── Main content area ──────────────────────────────────────────────────── */
+ARTICLE.mb-main {
+    display: block;
+    min-height: calc(100vh - var(--mb-topbar-h));
+    padding: 1.5rem;
+    text-align: left;
+}
+
+/* Page-level heading (e.g. "Post #123", "Upload", "Admin") */
+.mb-page-heading {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--mb-text);
+    margin: 0 0 1.25rem;
+    padding-bottom: .75rem;
+    border-bottom: 2px solid var(--mb-border);
+}
+
+/* Subheading blocks (breadcrumbs, search context) */
+ARTICLE.mb-main > DIV {
+    margin-bottom: 1rem;
+    font-size: .875rem;
+    color: var(--mb-text-2);
+}
+
+
+/* ── Card (block) styling in main area ──────────────────────────────────── */
+ARTICLE.mb-main .mb-card {
+    background: var(--mb-surface);
+    border: 1px solid var(--mb-border);
+    border-radius: var(--mb-radius);
+    box-shadow: var(--mb-shadow);
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+}
+ARTICLE.mb-main .mb-card:last-child { margin-bottom: 0; }
+
+/* Card title bar */
+.mb-card-title {
+    display: block;
+    margin: 0;
+    padding: .625rem 1rem;
+    background: var(--header);
+    border-bottom: 1px solid var(--mb-border);
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--mb-text);
+    text-align: left;
+}
+
+/* Manual Upload — native <details>/<summary> peekaboo (no JS) */
+details.mb-card > summary.mb-card-title {
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+}
+details.mb-card > summary.mb-card-title::-webkit-details-marker { display: none; }
+details.mb-card > summary.mb-card-title::after {
+    content: ' ▾';
+    font-size: .75em;
+    opacity: .55;
+}
+details[open].mb-card > summary.mb-card-title::after {
+    content: ' ▴';
+}
+
+/* Card body */
+.mb-card-body {
+    padding: var(--block-padding) 1rem;
+    background: var(--mb-surface);
+    font-size: .875rem;
+    color: var(--mb-text);
+    text-align: left;
+    border-top: none;
+}
+
+/* Paginator card is borderless */
+#paginator.mb-card {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+#paginator .mb-card-body {
+    background: transparent;
+    border: none;
+    text-align: center;
+    padding: .625rem 1rem;
+    color: var(--mb-text-2);
+    font-size: .8125rem;
+}
+
+/* Full-width layout: remove sidebar padding when extensions request no-left */
+BODY.mb-layout.layout-no-left {
+    padding-left: 0;
+}
+BODY.mb-layout.layout-no-left NAV.mb-sidebar {
+    display: none;
+}
+BODY.mb-layout.layout-no-left .mb-topbar-brand {
+    width: auto;
+    border-right: none;
+}
+BODY.mb-layout.layout-no-left .mb-subnav {
+    padding-left: 1.25rem;
+}
+
+
+/* ── Flash / alert messages ─────────────────────────────────────────────── */
+#flash {
+    background: var(--mb-warn-bg);
+    border: 1px solid var(--mb-warn);
+    border-radius: var(--mb-radius);
+    color: var(--mb-text);
+    padding: .75rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: .875rem;
+    font-weight: 500;
+}
+
+
+/* ── Thumbnail grid ─────────────────────────────────────────────────────── */
+
+/* Card wrapper added by ModernbooruCommonElementsTheme::build_thumb() */
+.mb-thumb-card {
+    display: inline-block;
+    background: var(--mb-surface);
+    border: 1px solid var(--mb-border);
+    border-radius: var(--mb-radius);
+    box-shadow: var(--mb-shadow-sm);
+    overflow: hidden;
+    margin: .375rem;
+    vertical-align: top;
+    transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
+}
+.mb-thumb-card:hover {
+    box-shadow: var(--mb-shadow-md);
+    transform: translateY(-3px);
+    border-color: var(--mb-accent);
+}
+
+/* The <a> inside the card (has class "thumb" but not any shm-* class we style) */
+.mb-thumb-card .thumb {
+    display: block;
+    line-height: 0;
+    padding: 0;
+}
+
+/* Target IMG via .thumb, not via shm-* parent classes */
+.thumb IMG {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: none;
+    background: var(--mb-border);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+}
+
+/* Image block spacious padding */
+#image-list .mb-card-body {
+    padding: .625rem;
+    text-align: left;
+}
+
+
+/* ── Forms ──────────────────────────────────────────────────────────────── */
+ARTICLE.mb-main INPUT[type="text"],
+ARTICLE.mb-main INPUT[type="url"],
+ARTICLE.mb-main INPUT[type="email"],
+ARTICLE.mb-main INPUT[type="password"],
+ARTICLE.mb-main INPUT[type="number"],
+ARTICLE.mb-main INPUT[type="search"],
+ARTICLE.mb-main TEXTAREA,
+ARTICLE.mb-main SELECT {
+    border: 1px solid var(--mb-border);
+    border-radius: var(--mb-radius-sm);
+    padding: .4rem .625rem;
+    font-size: .875rem;
+    color: var(--mb-text);
+    background: var(--mb-surface);
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+}
+ARTICLE.mb-main INPUT[type="text"]:focus,
+ARTICLE.mb-main INPUT[type="url"]:focus,
+ARTICLE.mb-main INPUT[type="search"]:focus,
+ARTICLE.mb-main TEXTAREA:focus,
+ARTICLE.mb-main SELECT:focus {
+    border-color: var(--mb-accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, .12);
+}
+
+ARTICLE.mb-main INPUT[type="submit"],
+ARTICLE.mb-main INPUT[type="button"],
+ARTICLE.mb-main BUTTON {
+    display: inline-block;
+    padding: .45rem 1rem;
+    background: var(--mb-accent);
+    color: #FFF;
+    border: none;
+    border-radius: var(--mb-radius-sm);
+    font-size: .875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+}
+ARTICLE.mb-main INPUT[type="submit"]:hover,
+ARTICLE.mb-main INPUT[type="button"]:hover,
+ARTICLE.mb-main BUTTON:hover { background: var(--mb-accent-hover); }
+
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+TABLE { border-collapse: collapse; }
+
+THEAD { font-weight: 600; font-size: .8125rem; }
+TD { vertical-align: top; text-align: left; padding: .375rem .5rem; }
+
+TABLE.form         { width: 100%; }
+TABLE.form TH      { text-align: right; font-weight: 600; padding-right: 1rem; white-space: nowrap; color: var(--mb-text-2); font-size: .8125rem; width: 1%; }
+TABLE.form TD      { text-align: left; }
+
+TABLE.zebra { width: 100%; border-spacing: 0; border: 1px solid var(--mb-border); border-radius: var(--mb-radius); overflow: hidden; font-size: .8125rem; }
+TABLE.zebra TD, TABLE.zebra TH { vertical-align: middle; padding: .5rem .75rem; border-bottom: 1px solid var(--mb-border); }
+TABLE.zebra THEAD TR:last-of-type TD,
+TABLE.zebra THEAD TR:last-of-type TH { border-bottom: 2px solid var(--mb-border); background: var(--zebra-header); position: sticky; top: 0; }
+TABLE.zebra TFOOT TR:first-of-type TD,
+TABLE.zebra TFOOT TR:first-of-type TH { border-top: 2px solid var(--mb-border); }
+TABLE.zebra TBODY TR:last-child TD,
+TABLE.zebra TBODY TR:last-child TH { border-bottom: none; }
+TABLE.zebra TR:nth-child(odd)  { background: var(--zebra-odd); }
+TABLE.zebra TR:nth-child(even) { background: var(--zebra-even); }
+TABLE.zebra INPUT:not([type="checkbox"]):not([type="radio"]),
+TABLE.zebra SELECT,
+TABLE.zebra TEXTAREA,
+TABLE.zebra BUTTON { width: 100%; }
+
+
+/* ── Tag list ───────────────────────────────────────────────────────────── */
+TABLE.tag_list                     { border-collapse: collapse; width: 100%; }
+TABLE.tag_list > THEAD             { display: none; }
+TABLE.tag_list > TBODY > TR > TD  { display: inline; padding: 0; border: none; }
+TABLE.tag_list > TBODY > TR > TD::after { content: " "; }
+.tag_count::before { content: "("; }
+.tag_count::after  { content: ")"; }
+.more::after       { content: " >>>"; }
+
+
+/* ── Comments ───────────────────────────────────────────────────────────── */
+.comment {
+    padding: .75rem;
+    border-bottom: 1px solid var(--mb-border);
+    font-size: .875rem;
+}
+.comment:first-child { padding-top: 0; }
+.comment:last-child  { border-bottom: none; }
+
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+FOOTER.mb-footer {
+    padding: 1rem 1.5rem;
+    font-size: .75rem;
+    color: var(--mb-text-3);
+    text-align: center;
+    border-top: 1px solid var(--mb-border);
+    background: var(--mb-surface);
+    margin-top: .5rem;
+}
+FOOTER.mb-footer A { color: var(--mb-text-2); }
+FOOTER.mb-footer A:hover { color: var(--mb-accent); }
+
+
+/* ── Misc page-specific tweaks ──────────────────────────────────────────── */
+ARTICLE.mb-main TABLE { width: 100%; margin: auto; }
+
+#short-wiki-description .mb-card-body { padding-bottom: 1rem; }
+#short-wiki-description H2            { margin: 0 0 .4em; }
+
+#pagelist { margin-top: 2rem; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — Sidebar collapses on narrow screens
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media screen and (max-width: 900px) {
+    /* Topbar nav links hide at medium width to save space */
+    .mb-topbar-nav { display: none; }
+}
+
+@media screen and (max-width: 768px) {
+
+    /* Remove sidebar indent — sidebar is off-screen by default */
+    BODY.mb-layout {
+        padding-left: 0;
+    }
+
+    /* Brand zone no longer needs sidebar width */
+    .mb-topbar-brand {
+        width: auto;
+        border-right: none;
+    }
+
+    /* Show the hamburger button */
+    .mb-hamburger {
+        display: flex;
+    }
+
+    /* Sidebar slides in from the left via transform */
+    NAV.mb-sidebar {
+        transform: translateX(-100%);
+        transition: transform .25s cubic-bezier(.4, 0, .2, 1);
+        z-index: 300;
+        box-shadow: none;
+    }
+
+    /* Reveal sidebar when checkbox is checked */
+    .mb-nav-toggle:checked ~ NAV.mb-sidebar {
+        transform: translateX(0);
+        box-shadow: var(--mb-shadow-md);
+    }
+
+    /* Dim overlay over main content when sidebar is open */
+    .mb-nav-toggle:checked ~ ARTICLE.mb-main::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .35);
+        z-index: 250;
+    }
+
+    /* Sub-nav spans full width on mobile */
+    .mb-subnav { padding-left: 1rem; }
+
+    /* Reduce main padding on mobile */
+    ARTICLE.mb-main { padding: 1rem; }
+
+    FOOTER.mb-footer { padding: .875rem 1rem; }
+}
+
+@media screen and (max-width: 480px) {
+    ARTICLE.mb-main   { padding: .75rem; }
+    .mb-page-heading  { font-size: 1.125rem; }
+    .mb-thumb-card    { margin: .25rem; }
+}
+
+/* ── Sidebar tag list ───────────────────────────────────────────────────── */
+.mb-tag-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mb-tag-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .3rem 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    gap: .5rem;
+}
+.mb-tag-item:last-child { border-bottom: none; }
+
+.mb-tag-link {
+    color: var(--mb-sidebar-text, #94A3B8);
+    text-decoration: none;
+    font-size: .8125rem;
+    line-height: 1.4;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color .12s;
+}
+.mb-tag-link:hover { color: var(--mb-sidebar-accent, #818CF8); }
+
+.mb-tag-count {
+    flex-shrink: 0;
+    font-size: .6875rem;
+    font-weight: 600;
+    color: var(--mb-sidebar-bg, #1E293B);
+    background: rgba(255,255,255,.15);
+    border-radius: 9999px;
+    padding: .1em .5em;
+    line-height: 1.6;
+}
+
+.mb-tag-more {
+    display: block;
+    margin-top: .625rem;
+    font-size: .75rem;
+    color: var(--mb-sidebar-accent, #818CF8);
+    text-decoration: none;
+    text-align: right;
+}
+.mb-tag-more:hover { text-decoration: underline; }

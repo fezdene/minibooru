@@ -1,0 +1,196 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Culinary Heritage Archival System — FYP Docker Environment
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# BEFORE STARTING:
+#   1. Generate SSH keys:  ./scripts/gen_ssh_keys.sh
+#   2. Create data dirs:   mkdir -p master_data mirror_data mirror_2_data scripts ssh_keys
+#   3. Build & start:      docker compose up --build -d
+#   4. Open archive:       http://localhost/           (mirror-node)
+#                          http://localhost:8081/      (mirror-2)
+#                          http://localhost:8080/      (master admin)
+#
+# NETWORK TOPOLOGY:
+#   host
+#   ├── port 80   ──► mirror-node:80   (primary public-facing archive)
+#   ├── port 8081 ──► mirror-2:80      (secondary public-facing archive)
+#   └── port 8080 ──► master-node:80   (admin ingest; restricted)
+#                        │
+#                   [archive-net]    (isolated Docker bridge)
+#                        │
+#                   master-node      (auto-pushes RSYNC to both mirrors every 30s)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Master Node ─────────────────────────────────────────────────────────────
+  # Ingests media via gallery-dl, generates SHA-256 hashes, stores metadata in
+  # SQLite, and RSYNC-pushes data/ to the Mirror over the internal network.
+  master-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.master
+    image: minibooru-master:latest
+    container_name: minibooru-master
+    hostname: master-node
+
+    networks:
+      - archive-net
+
+    ports:
+      # Exposed for admin setup — remove after initial configuration is done.
+      - "8080:80"
+
+    volumes:
+      # ── Code bind mount — VS Code edits are live, never overwritten by builds.
+      - ./:/var/www/shimmie
+
+      # ── Composer vendor overlay — named volume keeps the image's vendor/ intact
+      #    even though the bind mount above would otherwise shadow it.
+      #    Docker auto-copies image content here on first boot (empty-volume init).
+      - vendor_cache:/var/www/shimmie/vendor
+
+      # ── Per-node data overlay — overlays ./data/ from the code mount above.
+      #    Master's SQLite DB + media are the single source of truth here.
+      - ./master_data:/var/www/shimmie/data
+
+      # SSH private key (master → mirrors for outgoing RSYNC push).
+      # NOT :ro — entrypoint must chmod 600 it.
+      - ./ssh_keys/id_archive:/root/.ssh/id_archive
+
+      # Authorized key — allows mirrors to SSH back to master for rsync_pull.
+      - ./ssh_keys/authorized_keys:/root/.ssh/authorized_keys
+
+      # RSYNC push script called by the Network Ops Dashboard.
+      - ./scripts:/opt/scripts
+
+    environment:
+      # Points Shimmie2 at the SQLite file inside the mounted data volume.
+      DATABASE_DSN: "sqlite:/var/www/shimmie/data/shimmie.sqlite"
+      # Comma-separated list of mirror hostnames for the auto-push daemon.
+      RSYNC_MIRRORS: "mirror-node,mirror-2"
+      # Interval (seconds) between auto-push cycles.
+      RSYNC_INTERVAL: "30"
+
+    entrypoint: ["/entrypoint.master.sh"]
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ── Mirror Node ──────────────────────────────────────────────────────────────
+  # Read-only public replica. Receives RSYNC pushes from Master.
+  # Runs the 15-minute integrity audit cron job (integrity_audit.py).
+  # Exposes port 80 so the archive is browsable from the host.
+  mirror-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.mirror
+    image: minibooru-mirror:latest
+    container_name: minibooru-mirror
+    hostname: mirror-node
+
+    networks:
+      - archive-net
+
+    ports:
+      # Only this port is visible outside the Docker environment.
+      - "80:80"
+
+    volumes:
+      # ── Code bind mount (read-only on mirrors — they are replicas, not dev machines).
+      - ./:/var/www/shimmie:ro
+
+      # ── Vendor overlay — same named volume as master; vendor is static PHP libs.
+      - vendor_cache:/var/www/shimmie/vendor
+
+      # ── Per-node data overlay (writable — RSYNC push and PHP writes go here).
+      - ./mirror_data:/var/www/shimmie/data
+
+      # Authorized key — master authenticates with this to push via RSYNC.
+      # NOT :ro — entrypoint must chmod 600 it.
+      # Populate with:  cp ./ssh_keys/id_archive.pub ./ssh_keys/authorized_keys
+      - ./ssh_keys/authorized_keys:/root/.ssh/authorized_keys
+
+      # Private key — mirror uses this to SSH to master for rsync_pull (self-healing).
+      - ./ssh_keys/id_archive:/root/.ssh/id_archive
+
+    environment:
+      DATABASE_DSN: "sqlite:/var/www/shimmie/data/shimmie.sqlite"
+
+    entrypoint: ["/entrypoint.mirror.sh"]
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Mirror Node 2 ─────────────────────────────────────────────────────────────
+  # Second read-only replica. Receives RSYNC pushes from Master (auto every 30s).
+  mirror-2:
+    build:
+      context: .
+      dockerfile: Dockerfile.mirror
+    image: minibooru-mirror:latest
+    container_name: minibooru-mirror-2
+    hostname: mirror-2
+
+    networks:
+      - archive-net
+
+    ports:
+      - "8081:80"
+
+    volumes:
+      # ── Code bind mount (read-only — same code base, mirror-2 is a replica).
+      - ./:/var/www/shimmie:ro
+
+      # ── Vendor overlay — same named volume; vendor is read-only PHP libs.
+      - vendor_cache:/var/www/shimmie/vendor
+
+      # ── Per-node data overlay (independent from mirror-node).
+      - ./mirror_2_data:/var/www/shimmie/data
+
+      # Authorized key — master authenticates with this to push via RSYNC.
+      - ./ssh_keys/authorized_keys:/root/.ssh/authorized_keys
+
+      # Private key — mirror-2 uses this to SSH to master for rsync_pull.
+      - ./ssh_keys/id_archive:/root/.ssh/id_archive
+
+    environment:
+      DATABASE_DSN: "sqlite:/var/www/shimmie/data/shimmie.sqlite"
+
+    entrypoint: ["/entrypoint.mirror.sh"]
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+# ── Network ──────────────────────────────────────────────────────────────────
+networks:
+  archive-net:
+    driver: bridge
+    # User-defined bridge: containers share DNS by service name (mirror-node,
+    # master-node) and are isolated from all other Docker projects.
+    # Not marked `internal: true` so the Master Node can reach the internet
+    # for gallery-dl downloads.  The Mirror Node's only external exposure is
+    # the port 80 mapping above.
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  # Composer vendor directory. Docker copies the image's vendor/ into this
+  # named volume on first boot (empty-volume initialisation), so a fresh clone
+  # works without a local `composer install` step.
+  # To force a refresh after a composer.lock change: docker compose down -v
+  vendor_cache:
