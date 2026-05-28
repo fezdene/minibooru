@@ -42,7 +42,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     nodejs \
     npm \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/share/zoneinfo/Asia/Kuala_Lumpur /etc/localtime \
+    && echo "Asia/Kuala_Lumpur" > /etc/timezone
 
 # ── PHP extensions ────────────────────────────────────────────────────────────
 RUN docker-php-ext-configure gd \

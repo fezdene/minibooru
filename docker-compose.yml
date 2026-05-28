@@ -39,7 +39,7 @@ services:
 
     ports:
       # Exposed for admin setup — remove after initial configuration is done.
-      - "8080:80"
+      - "127.0.0.1:8080:80"
 
     volumes:
       # ── Code bind mount — VS Code edits are live, never overwritten by builds.

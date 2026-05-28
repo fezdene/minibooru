@@ -301,5 +301,78 @@ final class Upgrade extends Extension
             );
             $this->set_version(25);
         }
+
+        if ($this->get_version() < 26) {
+            Log::info("upgrade", "Applying minibooru full UI and operational defaults");
+
+            foreach ([
+                // ── Thumbnails ────────────────────────────────────────────────
+                'thumb_engine'      => 'convert',
+                'thumb_width'       => '192',
+                'thumb_height'      => '192',
+                'thumb_fit'         => 'Fit',
+                'thumb_mime'        => 'image/jpeg',
+                'thumb_alpha_color' => '#000000',
+
+                // ── Post list / index ─────────────────────────────────────────
+                'index_images'      => '24',
+                'image_on_delete'   => 'next',
+                'image_show_meta'   => 'N',
+                'image_tip'         => '$tags // $size // $filesize',
+                'sitename_in_title' => 'none',
+
+                // ── Tag display ───────────────────────────────────────────────
+                'tag_list_length'         => '15',
+                'tag_list_numbers'        => 'Y',
+                'tag_list_pages'          => 'N',
+                'tag_list_omit_tags'      => 'tagme*',
+                'tag_list_image_type'     => 'related',
+                'tag_list_popular_sort'   => 'tagcount',
+                'tag_list_related_sort'   => 'alphabetical',
+                'tag_categories_split_on_view' => 'Y',
+                'popular_tag_list_length' => '15',
+
+                // ── Upload ────────────────────────────────────────────────────
+                'upload_count' => '5',
+                'upload_size'  => '20971520',
+
+                // ── Video playback ────────────────────────────────────────────
+                'video_playback_autoplay' => 'Y',
+                'video_playback_loop'     => 'Y',
+                'video_playback_mute'     => 'N',
+
+                // ── Comments ─────────────────────────────────────────────────
+                'comment_count'          => '5',
+                'comment_limit'          => '10',
+                'comment_list_count'     => '10',
+                'comment_window'         => '5',
+                'comment_samefags_public'=> 'N',
+
+                // ── Post titles ───────────────────────────────────────────────
+                'post_titles_default_to_filename'  => 'N',
+                'post_titles_show_in_window_title' => 'Y',
+
+                // ── User / auth ───────────────────────────────────────────────
+                'login_signup_enabled' => 'Y',
+                'user_login_redirect'  => 'previous',
+                'user_email_required'  => 'N',
+                'avatar_size'          => '128',
+                'transload_engine'     => 'curl',
+                'info_link'            => 'https://en.wikipedia.org/wiki/$tag',
+
+                // ── Network ops ───────────────────────────────────────────────
+                'network_ops_master_ip' => 'master-node',
+
+                // ── Content filter ────────────────────────────────────────────
+                'filter_tags' => "spoilers\nguro\nscat\nfurry -rating:s",
+            ] as $key => $val) {
+                $database->execute(
+                    "INSERT OR REPLACE INTO config (name, value) VALUES (:k, :v)",
+                    ['k' => $key, 'v' => $val]
+                );
+            }
+
+            $this->set_version(26);
+        }
     }
 }

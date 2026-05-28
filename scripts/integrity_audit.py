@@ -82,7 +82,7 @@ def _read_wh_splits(shimmie_root: Path) -> int:
 SHIMMIE_ROOT: Path = Path("/var/www/shimmie")
 
 # Path to the SQLite database (opened read-only by this script).
-DB_PATH: Path = SHIMMIE_ROOT / "shimmie.sqlite"
+DB_PATH: Path = SHIMMIE_ROOT / "data" / "shimmie.sqlite"
 
 # Physical media directory that will be walked for integrity checks.
 DATA_DIR: Path = SHIMMIE_ROOT / "data" / "images"

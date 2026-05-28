@@ -22,7 +22,7 @@ final class SetupConfig extends ConfigGroup
     #[ConfigMeta("Contact URL", ConfigType::STRING)]
     public const CONTACT_LINK = "contact_link";
 
-    #[ConfigMeta("Theme", ConfigType::STRING, default: "default", options: "Shimmie2\SetupConfig::get_theme_options")]
+    #[ConfigMeta("Theme", ConfigType::STRING, default: "modernbooru", options: "Shimmie2\SetupConfig::get_theme_options")]
     public const THEME = "theme";
 
     #[ConfigMeta("Avatar size", ConfigType::INT, default: 128)]

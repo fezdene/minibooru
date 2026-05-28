@@ -125,9 +125,17 @@ class NetworkOps extends Extension
             if (!Ctx::$user->can(AdminPermission::MANAGE_ADMINTOOLS)) {
                 throw new PermissionDenied("Admin access required.");
             }
+            if (isset($_GET['json'])) {
+                $lines = $this->read_audit_log_lines(500);
+                Ctx::$page->set_data(MimeType::JSON, json_encode([
+                    'lines' => array_values($lines),
+                    'ts'    => (new \DateTime('now', new \DateTimeZone('Asia/Kuala_Lumpur')))->format('H:i:s'),
+                ], JSON_THROW_ON_ERROR));
+                return;
+            }
             Ctx::$page->set_title("Audit Log");
             Ctx::$page->set_heading("Audit Log");
-            $this->theme->display_audit($this->read_audit_log_lines(300));
+            $this->theme->display_audit($this->read_audit_log_lines(500));
         }
     }
 
