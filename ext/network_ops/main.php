@@ -16,6 +16,8 @@ class NetworkOps extends Extension
     private const MONITOR_TIMEOUT = 2;
     // Flat file outside data/ — never overwritten by rsync.
     private const NODE_CFG_FILE   = '/var/www/shimmie/config/network_ops_node.json';
+    // Shared background-job status file used by all minibooru extensions.
+    private const BG_STATUS_FILE  = '/tmp/minibooru_bg_jobs.json';
 
     // ── Navigation ───────────────────────────────────────────────────────────
 
@@ -84,6 +86,19 @@ class NetworkOps extends Extension
                     'mirrors' => $probe_data,
                     'ts'      => (new \DateTime('now', new \DateTimeZone('Asia/Kuala_Lumpur')))->format('H:i:s'),
                 ], JSON_THROW_ON_ERROR)
+            );
+            return;
+        }
+
+        // ── Background job status JSON — admin only ───────────────────────────
+        if ($event->page_matches("network/bg_status", method: "GET")) {
+            if (!Ctx::$user->can(AdminPermission::MANAGE_ADMINTOOLS)) {
+                Ctx::$page->set_data(MimeType::JSON, json_encode(['error' => 'Forbidden'], JSON_THROW_ON_ERROR));
+                return;
+            }
+            Ctx::$page->set_data(
+                MimeType::JSON,
+                json_encode(['jobs' => self::bg_get_active(), 'ts' => time()], JSON_THROW_ON_ERROR)
             );
             return;
         }
@@ -338,6 +353,7 @@ class NetworkOps extends Extension
         $safe_log = escapeshellarg(self::AUDIT_LOG);
         foreach ($targets as $m) {
             $safe_m = escapeshellarg($m);
+            self::bg_start("rsync_{$m}", "RSYNC push \u{2192} {$m}", 300);
             shell_exec(self::RSYNC_SCRIPT . ' ' . $safe_m . ' >> ' . $safe_log . ' 2>&1 &');
             Log::info('network_ops', "Force Re-Sync dispatched → {$m} by " . Ctx::$user->name);
         }
@@ -403,6 +419,36 @@ class NetworkOps extends Extension
         }
         $data = json_decode(file_get_contents($file) ?: '{}', true);
         return is_array($data) ? $data : null;
+    }
+
+    // ── Background job status helpers ────────────────────────────────────────
+
+    private static function bg_start(string $id, string $label, int $timeout = 300): void
+    {
+        $file = self::BG_STATUS_FILE;
+        $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
+        $now  = time();
+        $jobs = array_filter($jobs, fn($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
+        $jobs[] = ['id' => $id, 'label' => $label, 'started_at' => $now, 'timeout' => $timeout];
+        @file_put_contents($file, json_encode(array_values($jobs)), LOCK_EX);
+    }
+
+    private static function bg_finish(string $id): void
+    {
+        $file = self::BG_STATUS_FILE;
+        $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
+        $now  = time();
+        $jobs = array_filter($jobs, fn($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
+        @file_put_contents($file, json_encode(array_values($jobs)), LOCK_EX);
+    }
+
+    /** @return list<array{id: string, label: string, started_at: int, timeout: int}> */
+    private static function bg_get_active(): array
+    {
+        $file = self::BG_STATUS_FILE;
+        $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
+        $now  = time();
+        return array_values(array_filter($jobs, fn($j) => ($now - $j['started_at']) < $j['timeout']));
     }
 
     private function is_valid_host(string $host): bool

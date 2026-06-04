@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Shimmie2;
 
-use function MicroHTML\{A, ARTICLE, BODY, DIV, FOOTER, H1, H3, HEADER, IMG, INPUT, LABEL, LINK, NAV, SECTION, SPAN, emptyHTML, rawHTML};
+use function MicroHTML\{A, ARTICLE, BODY, DIV, FOOTER, H1, H3, HEADER, IMG, INPUT, LABEL, LINK, NAV, SCRIPT, SECTION, SPAN, STYLE, emptyHTML, rawHTML};
 
 use MicroHTML\HTMLElement;
 
@@ -195,6 +195,9 @@ class ModernbooruPage extends Page
 
             // ── Footer ───────────────────────────────────────────────────────
             FOOTER(['class' => 'mb-footer'], $this->footer_html()),
+
+            // ── Admin background-job toast (admin only) ───────────────────────
+            ...(Ctx::$user->can(AdminPermission::MANAGE_ADMINTOOLS) ? $this->admin_bg_toast() : []),
         );
     }
 
@@ -233,5 +236,60 @@ class ModernbooruPage extends Page
         }
 
         return $card;
+    }
+
+    // ── Admin background-job popup ────────────────────────────────────────────
+
+    /** @return list<HTMLElement> */
+    private function admin_bg_toast(): array
+    {
+        $endpoint = json_encode(make_link('network/bg_status'));
+        return [
+            DIV(
+                [
+                    'id'    => 'mb-bgjob-toast',
+                    'style' => 'display:none;position:fixed;bottom:1.25rem;right:1.25rem;z-index:9999;'
+                             . 'background:#111827;border:1px solid #374151;border-radius:.6rem;'
+                             . 'padding:.75rem 1rem;color:#e5e7eb;font-size:.82rem;'
+                             . 'box-shadow:0 4px 20px rgba(0,0,0,.5);min-width:220px;max-width:340px;'
+                             . 'animation:mb-toast-in .2s ease',
+                ],
+                DIV(
+                    ['style' => 'display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;font-weight:600'],
+                    SPAN(['id' => 'mb-bgjob-dot', 'style' => 'display:inline-block;width:.55rem;height:.55rem;border-radius:50%;background:#fbbf24']),
+                    'Background job running',
+                ),
+                rawHTML('<ul id="mb-bgjob-list" style="margin:0;padding-left:1.1rem;line-height:1.7;color:#9ca3af"></ul>'),
+            ),
+            STYLE(rawHTML(
+                '@keyframes mb-toast-in{from{opacity:0;transform:translateY(.5rem)}to{opacity:1;transform:none}}'
+                . '@keyframes mb-dot-pulse{0%,100%{opacity:1}50%{opacity:.25}}'
+                . '#mb-bgjob-dot{animation:mb-dot-pulse 1.4s ease-in-out infinite}'
+            )),
+            SCRIPT(rawHTML(
+                '(function(){'
+                . 'var ep=' . $endpoint . ';'
+                . 'var t=document.getElementById("mb-bgjob-toast");'
+                . 'var l=document.getElementById("mb-bgjob-list");'
+                . 'function poll(){'
+                .   'fetch(ep,{headers:{"Accept":"application/json"}})'
+                .     '.then(function(r){return r.json();})'
+                .     '.then(function(d){'
+                .       'var jobs=d.jobs||[];'
+                .       'if(jobs.length>0){'
+                .         'l.innerHTML=jobs.map(function(j){'
+                .           'return "<li>"+j.label.replace(/</g,"&lt;")+"</li>";'
+                .         '}).join("");'
+                .         't.style.display="block";'
+                .       '}else{'
+                .         't.style.display="none";'
+                .       '}'
+                .     '})'
+                .     '.catch(function(){});'
+                . '}'
+                . 'poll();setInterval(poll,5000);'
+                . '})();'
+            )),
+        ];
     }
 }

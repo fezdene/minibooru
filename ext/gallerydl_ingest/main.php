@@ -15,6 +15,7 @@ class GalleryDlIngest extends Extension
     private const SINGLEFILE_BIN  = 'single-file';
     private const CHROMIUM_BIN    = '/usr/bin/chromium';
     private const INGEST_TMP_BASE = '/tmp/ingest';
+    private const BG_STATUS_FILE  = '/tmp/minibooru_bg_jobs.json';
     private const DEFAULT_TAGS    = 'gallery-dl:ingested';
 
     // Metadata and sidecar files produced alongside media — skip these.
@@ -121,7 +122,11 @@ class GalleryDlIngest extends Extension
 
         set_time_limit(0);
         Ctx::$database->set_timeout(null);
+        $job_id = 'ingest_' . bin2hex(random_bytes(4));
+        $host   = parse_url($raw_url, PHP_URL_HOST) ?: 'unknown';
+        self::bg_start($job_id, "Ingest ({$engine}): {$host}", 600);
         [, $message] = $this->run_ingest($raw_url, $title, $format, $engine);
+        self::bg_finish($job_id);
         Ctx::$page->flash($message);
         Ctx::$page->set_redirect(make_link("upload"));
     }
@@ -193,7 +198,11 @@ class GalleryDlIngest extends Extension
         $eng = $this->safe_engine((string)($row['ingest_engine'] ?? 'auto'));
         set_time_limit(0);
         Ctx::$database->set_timeout(null);
+        $job_id = 'ingest_q' . $id;
+        $host   = parse_url((string)$row['url'], PHP_URL_HOST) ?: 'unknown';
+        self::bg_start($job_id, "Queue ingest ({$eng}): {$host}", 600);
         [$ok, $message] = $this->run_ingest((string)$row['url'], (string)$row['title'], $fmt, $eng);
+        self::bg_finish($job_id);
 
         Ctx::$database->execute(
             "UPDATE gallerydl_queue
@@ -744,5 +753,26 @@ class GalleryDlIngest extends Extension
         }
 
         rmdir($dir);
+    }
+
+    // ── Background job status helpers ────────────────────────────────────────
+
+    private static function bg_start(string $id, string $label, int $timeout = 600): void
+    {
+        $file = self::BG_STATUS_FILE;
+        $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
+        $now  = time();
+        $jobs = array_filter($jobs, fn($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
+        $jobs[] = ['id' => $id, 'label' => $label, 'started_at' => $now, 'timeout' => $timeout];
+        @file_put_contents($file, json_encode(array_values($jobs)), LOCK_EX);
+    }
+
+    private static function bg_finish(string $id): void
+    {
+        $file = self::BG_STATUS_FILE;
+        $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
+        $now  = time();
+        $jobs = array_filter($jobs, fn($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
+        @file_put_contents($file, json_encode(array_values($jobs)), LOCK_EX);
     }
 }
