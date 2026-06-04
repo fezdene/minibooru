@@ -35,10 +35,10 @@ class NetworkOps extends Extension
         if ($event->parent !== "network") {
             return;
         }
-        $event->add_nav_link(make_link('network'),        "Analytics",     ["network"],        order: 10);
-        $event->add_nav_link(make_link('network/ops'),    "Operations",    ["network/ops"],    order: 20);
+        $event->add_nav_link(make_link('network'), "Analytics", ["network"], order: 10);
+        $event->add_nav_link(make_link('network/ops'), "Operations", ["network/ops"], order: 20);
         $event->add_nav_link(make_link('network/status'), "Mirror Status", ["network/status"], order: 30);
-        $event->add_nav_link(make_link('network/audit'),  "Audit Log",     ["network/audit"],  order: 40);
+        $event->add_nav_link(make_link('network/audit'), "Audit Log", ["network/audit"], order: 40);
     }
 
     // ── Request handling ─────────────────────────────────────────────────────
@@ -305,7 +305,7 @@ class NetworkOps extends Extension
         $mirrors = $this->read_node_mirrors();
 
         if ($action === 'remove') {
-            $mirrors = array_values(array_filter($mirrors, fn($m) => $m !== $host));
+            $mirrors = array_values(array_filter($mirrors, fn ($m) => $m !== $host));
             $this->write_node_mirrors($mirrors);
             Log::info('network_ops', "Mirror removed: {$host} by " . Ctx::$user->name);
             Ctx::$page->flash("Mirror removed: {$host}");
@@ -342,7 +342,7 @@ class NetworkOps extends Extension
 
         // Target a specific mirror or all of them.
         $targets = $target !== '' ? [$target] : $mirrors;
-        $targets = array_filter($targets, fn($m) => in_array($m, $mirrors, true));
+        $targets = array_filter($targets, fn ($m) => in_array($m, $mirrors, true));
 
         if (empty($targets)) {
             Ctx::$page->flash("No valid mirrors to sync.");
@@ -383,7 +383,7 @@ class NetworkOps extends Extension
         }
         // New format
         if (isset($json['mirrors']) && is_array($json['mirrors'])) {
-            return array_values(array_filter($json['mirrors'], fn($m) => is_string($m) && $m !== ''));
+            return array_values(array_filter($json['mirrors'], fn ($m) => is_string($m) && $m !== ''));
         }
         // Backward compat: old single mirror_ip field
         $old = (string)($json['mirror_ip'] ?? '');
@@ -428,7 +428,7 @@ class NetworkOps extends Extension
         $file = self::BG_STATUS_FILE;
         $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
         $now  = time();
-        $jobs = array_filter($jobs, fn($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
+        $jobs = array_filter($jobs, fn ($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
         $jobs[] = ['id' => $id, 'label' => $label, 'started_at' => $now, 'timeout' => $timeout];
         @file_put_contents($file, json_encode(array_values($jobs)), LOCK_EX);
     }
@@ -438,7 +438,7 @@ class NetworkOps extends Extension
         $file = self::BG_STATUS_FILE;
         $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
         $now  = time();
-        $jobs = array_filter($jobs, fn($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
+        $jobs = array_filter($jobs, fn ($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
         @file_put_contents($file, json_encode(array_values($jobs)), LOCK_EX);
     }
 
@@ -448,7 +448,7 @@ class NetworkOps extends Extension
         $file = self::BG_STATUS_FILE;
         $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
         $now  = time();
-        return array_values(array_filter($jobs, fn($j) => ($now - $j['started_at']) < $j['timeout']));
+        return array_values(array_filter($jobs, fn ($j) => ($now - $j['started_at']) < $j['timeout']));
     }
 
     private function is_valid_host(string $host): bool

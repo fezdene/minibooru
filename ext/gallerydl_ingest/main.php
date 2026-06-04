@@ -709,7 +709,7 @@ class GalleryDlIngest extends Extension
     /** @param array{username: string, date: string, platform: string, description: string} $meta */
     private function build_auto_title(array $meta): string
     {
-        $parts = array_filter([$meta['username'], $meta['date'], $meta['platform']], fn($p) => $p !== '');
+        $parts = array_filter([$meta['username'], $meta['date'], $meta['platform']], fn ($p) => $p !== '');
         return empty($parts) ? '' : '[' . implode(' · ', $parts) . ']';
     }
 
@@ -762,7 +762,7 @@ class GalleryDlIngest extends Extension
         $file = self::BG_STATUS_FILE;
         $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
         $now  = time();
-        $jobs = array_filter($jobs, fn($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
+        $jobs = array_filter($jobs, fn ($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
         $jobs[] = ['id' => $id, 'label' => $label, 'started_at' => $now, 'timeout' => $timeout];
         @file_put_contents($file, json_encode(array_values($jobs)), LOCK_EX);
     }
@@ -772,7 +772,7 @@ class GalleryDlIngest extends Extension
         $file = self::BG_STATUS_FILE;
         $jobs = json_decode(@file_get_contents($file) ?: '[]', true) ?: [];
         $now  = time();
-        $jobs = array_filter($jobs, fn($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
+        $jobs = array_filter($jobs, fn ($j) => $j['id'] !== $id && ($now - $j['started_at']) < $j['timeout']);
         @file_put_contents($file, json_encode(array_values($jobs)), LOCK_EX);
     }
 }
