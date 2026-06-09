@@ -383,58 +383,78 @@ class GalleryDlIngest extends Extension
             );
         }
 
+        if (!is_executable(self::SINGLEFILE_BIN)) {
+            throw new \RuntimeException(
+                "SingleFile CLI not found at " . self::SINGLEFILE_BIN . " — rebuild the Docker image."
+            );
+        }
+
         $html_file = $output_dir . '/webpage.html';
+        // Per-ingest Chromium profile dirs in /tmp (not inside output_dir — the
+        // ingest_directory scanner would otherwise try to ingest profile files).
+        // www-data can write to /tmp; /var/www/.config/chromium is root-owned.
+        $profile_suffix  = basename($output_dir);
+        $sf_profile_dir  = '/tmp/chromium-sf-'  . $profile_suffix;
+        $pdf_profile_dir = '/tmp/chromium-pdf-' . $profile_suffix;
 
         $browser_args = escapeshellarg(json_encode([
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-gpu',
             '--disable-dev-shm-usage',
+            '--user-data-dir=' . $sf_profile_dir,
         ]));
 
-        $cmd_sf = self::SINGLEFILE_BIN
-            . ' --browser-executable-path ' . escapeshellarg($chromium)
-            . ' --browser-args '            . $browser_args
-            . ' '                           . escapeshellarg($url)
-            . ' '                           . escapeshellarg($html_file)
-            . ' 2>&1';
+        try {
+            $cmd_sf = self::SINGLEFILE_BIN
+                . ' --browser-executable-path ' . escapeshellarg($chromium)
+                . ' --browser-args '            . $browser_args
+                . ' '                           . escapeshellarg($url)
+                . ' '                           . escapeshellarg($html_file)
+                . ' 2>&1';
 
-        exec($cmd_sf, $sf_lines, $sf_exit);
+            exec($cmd_sf, $sf_lines, $sf_exit);
 
-        if ($sf_exit !== 0 || !file_exists($html_file)) {
-            $tail = implode('; ', array_slice($sf_lines, -3));
-            throw new \RuntimeException("SingleFile failed (exit {$sf_exit}): {$tail}");
+            if ($sf_exit !== 0 || !file_exists($html_file)) {
+                $tail = implode('; ', array_slice($sf_lines, -3));
+                throw new \RuntimeException("SingleFile failed (exit {$sf_exit}): {$tail}");
+            }
+
+            // HTML format: keep the .html file as-is for ingestion by handle_html
+            if ($format === 'html') {
+                return $sf_lines;
+            }
+
+            // PDF format: convert the HTML to PDF then remove the HTML file
+            $pdf_file = $output_dir . '/webpage.pdf';
+
+            $cmd_pdf = escapeshellarg($chromium)
+                . ' --headless=new'
+                . ' --no-sandbox'
+                . ' --disable-setuid-sandbox'
+                . ' --disable-gpu'
+                . ' --disable-dev-shm-usage'
+                . ' --user-data-dir=' . escapeshellarg($pdf_profile_dir)
+                . ' --run-all-compositor-stages-before-draw'
+                . ' --print-to-pdf=' . escapeshellarg($pdf_file)
+                . ' '                . escapeshellarg('file://' . $html_file)
+                . ' 2>&1';
+
+            exec($cmd_pdf, $pdf_lines, $pdf_exit);
+
+            @unlink($html_file);
+
+            if ($pdf_exit !== 0 || !file_exists($pdf_file)) {
+                $tail = implode('; ', array_slice($pdf_lines, -3));
+                throw new \RuntimeException("PDF conversion failed (exit {$pdf_exit}): {$tail}");
+            }
+
+            return array_merge($sf_lines, $pdf_lines);
+
+        } finally {
+            $this->cleanup_directory($sf_profile_dir);
+            $this->cleanup_directory($pdf_profile_dir);
         }
-
-        // HTML format: keep the .html file as-is for ingestion by handle_html
-        if ($format === 'html') {
-            return $sf_lines;
-        }
-
-        // PDF format: convert the HTML to PDF then remove the HTML file
-        $pdf_file = $output_dir . '/webpage.pdf';
-
-        $cmd_pdf = escapeshellarg($chromium)
-            . ' --headless=new'
-            . ' --no-sandbox'
-            . ' --disable-setuid-sandbox'
-            . ' --disable-gpu'
-            . ' --disable-dev-shm-usage'
-            . ' --run-all-compositor-stages-before-draw'
-            . ' --print-to-pdf=' . escapeshellarg($pdf_file)
-            . ' '                . escapeshellarg('file://' . $html_file)
-            . ' 2>&1';
-
-        exec($cmd_pdf, $pdf_lines, $pdf_exit);
-
-        @unlink($html_file);
-
-        if ($pdf_exit !== 0 || !file_exists($pdf_file)) {
-            $tail = implode('; ', array_slice($pdf_lines, -3));
-            throw new \RuntimeException("PDF conversion failed (exit {$pdf_exit}): {$tail}");
-        }
-
-        return array_merge($sf_lines, $pdf_lines);
     }
 
     // -------------------------------------------------------------------------
