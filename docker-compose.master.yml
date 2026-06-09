@@ -27,15 +27,14 @@ services:
     hostname: master-node
 
     ports:
-      # Admin UI — only your own IP should reach this (enforce with DO firewall).
-      - "127.0.0.1:8080:80"
+      # Admin UI — exposed publicly; DO firewall restricts to your IP only.
+      - "8080:80"
       # SSH for rsync_pull (mirrors pull individual files for self-healing).
       # Host port 2222 avoids conflict with the droplet's own SSH on port 22.
       - "2222:22"
 
     volumes:
-      - ./:/var/www/shimmie
-      - vendor_cache:/var/www/shimmie/vendor
+      # Code is baked into the image on cloud — no bind mount needed.
       - ./master_data:/var/www/shimmie/data
       - ./ssh_keys/id_archive:/root/.ssh/id_archive
       - ./ssh_keys/authorized_keys:/root/.ssh/authorized_keys
@@ -59,5 +58,3 @@ services:
       retries: 5
       start_period: 20s
 
-volumes:
-  vendor_cache:
