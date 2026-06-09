@@ -18,6 +18,14 @@ class GalleryDlIngest extends Extension
     private const BG_STATUS_FILE  = '/tmp/minibooru_bg_jobs.json';
     private const DEFAULT_TAGS    = 'gallery-dl:ingested';
 
+    // Per-engine exec() timeouts (seconds). SingleFile has a separate
+    // --browser-timeout (ms) that fires first; the shell timeout is a hard backstop.
+    private const TIMEOUT_GALLERY_DL  = 300;  // image galleries can be large
+    private const TIMEOUT_YTDLP       = 600;  // video downloads can be large
+    private const TIMEOUT_SINGLEFILE  = 120;  // webpage capture should be fast
+    private const TIMEOUT_CHROMIUM    = 90;   // PDF rendering of a local HTML file
+    private const BROWSER_TIMEOUT_MS  = 90000; // SingleFile --browser-timeout
+
     // Metadata and sidecar files produced alongside media — skip these.
     private const SKIP_EXTENSIONS = ['json', 'txt', 'log', 'part', 'aria2', 'vtt', 'srt', 'ass', 'ssa', 'sbv'];
 
@@ -406,9 +414,11 @@ class GalleryDlIngest extends Extension
         ]));
 
         try {
-            $cmd_sf = self::SINGLEFILE_BIN
+            $cmd_sf = 'timeout ' . self::TIMEOUT_SINGLEFILE . ' ' . self::SINGLEFILE_BIN
                 . ' --browser-executable-path ' . escapeshellarg($chromium)
                 . ' --browser-args '            . $browser_args
+                . ' --browser-wait-until=networkidle2'
+                . ' --browser-timeout='         . self::BROWSER_TIMEOUT_MS
                 . ' '                           . escapeshellarg($url)
                 . ' '                           . escapeshellarg($html_file)
                 . ' 2>&1';
@@ -428,7 +438,7 @@ class GalleryDlIngest extends Extension
             // PDF format: convert the HTML to PDF then remove the HTML file
             $pdf_file = $output_dir . '/webpage.pdf';
 
-            $cmd_pdf = escapeshellarg($chromium)
+            $cmd_pdf = 'timeout ' . self::TIMEOUT_CHROMIUM . ' ' . escapeshellarg($chromium)
                 . ' --headless=new'
                 . ' --no-sandbox'
                 . ' --disable-setuid-sandbox'
@@ -474,7 +484,8 @@ class GalleryDlIngest extends Extension
         // --no-part : prevents incomplete .part files appearing as valid media.
         // --        : end-of-options sentinel; stops gallery-dl from treating
         //             the URL as a command-line flag (e.g. --exec injection).
-        $command = self::GALLERY_DL_BIN . " --no-part --write-metadata -d {$safe_dir} -- {$safe_url} 2>&1";
+        $command = 'timeout ' . self::TIMEOUT_GALLERY_DL . ' '
+            . self::GALLERY_DL_BIN . " --no-part --write-metadata -d {$safe_dir} -- {$safe_url} 2>&1";
 
         exec($command, $output_lines, $exit_code);
 
@@ -511,7 +522,8 @@ class GalleryDlIngest extends Extension
         $safe_url = escapeshellarg($url);
 
         // -P: set the download base path (avoids %-template shell expansion).
-        $command = self::YTDLP_BIN . " --no-part --write-info-json -P {$safe_dir} -- {$safe_url} 2>&1";
+        $command = 'timeout ' . self::TIMEOUT_YTDLP . ' '
+            . self::YTDLP_BIN . " --no-part --write-info-json -P {$safe_dir} -- {$safe_url} 2>&1";
 
         exec($command, $output_lines, $exit_code);
 
