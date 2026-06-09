@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.mirror.yml — Mirror Node 1 (DigitalOcean droplet)
+#
+# BEFORE STARTING ON THIS DROPLET:
+#   1. Clone repo:           git clone https://github.com/fezdene/minibooru.git /opt/minibooru
+#   2. Enter dir:            cd /opt/minibooru
+#   3. Copy SSH keys:        mkdir -p ssh_keys mirror_data
+#                            # Copy authorized_keys (public) + id_archive (private) to ./ssh_keys/
+#   4. Fill in master IP:    edit MASTER_HOST below (DO VPC private IP of master droplet)
+#   5. Build & start:        docker compose -f docker-compose.mirror.yml up --build -d
+#
+# DO FIREWALL RULES for this droplet:
+#   Allow inbound:  port 80   from anywhere (public archive)
+#                   port 2222 from MASTER private IP only (RSYNC push + rsync_pull)
+#   Block inbound:  everything else
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  mirror-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.mirror
+    image: minibooru-mirror:latest
+    container_name: minibooru-mirror
+    hostname: mirror-node
+
+    ports:
+      # Public archive — exposed to internet.
+      - "80:80"
+      # SSH for RSYNC push from master.
+      # Host port 2222 avoids conflict with the droplet's own SSH on port 22.
+      # DO firewall must restrict this to master's private IP only.
+      - "2222:22"
+
+    volumes:
+      - ./:/var/www/shimmie:ro
+      - vendor_cache:/var/www/shimmie/vendor
+      - ./mirror_data:/var/www/shimmie/data
+      - ./ssh_keys/authorized_keys:/root/.ssh/authorized_keys
+      - ./ssh_keys/id_archive:/root/.ssh/id_archive
+
+    environment:
+      DATABASE_DSN: "sqlite:/var/www/shimmie/data/shimmie.sqlite"
+      # ── Fill in the DO VPC private IP of the master droplet ─────────────────
+      MASTER_HOST: "10.YOUR.MASTER.IP"
+      # Must match host port mapping above — used by rsync_pull.sh for self-healing.
+      RSYNC_SSH_PORT: "2222"
+
+    entrypoint: ["/entrypoint.mirror.sh"]
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  vendor_cache:

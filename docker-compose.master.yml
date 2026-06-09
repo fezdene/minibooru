@@ -1,0 +1,63 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.master.yml — Master Node (DigitalOcean droplet)
+#
+# BEFORE STARTING ON THIS DROPLET:
+#   1. Clone repo:           git clone https://github.com/fezdene/minibooru.git /opt/minibooru
+#   2. Enter dir:            cd /opt/minibooru
+#   3. Copy SSH keys:        mkdir -p ssh_keys master_data scripts
+#                            # Copy id_archive (private) + authorized_keys (public) to ./ssh_keys/
+#   4. Fill in private IPs:  edit RSYNC_MIRRORS below (DO VPC private IPs of both mirrors)
+#   5. Build & start:        docker compose -f docker-compose.master.yml up --build -d
+#
+# DO FIREWALL RULES for this droplet:
+#   Allow inbound:  port 80  from your IP only (or remove the 80:80 mapping below)
+#                   port 8080 from your IP only (admin)
+#                   port 2222 from MIRROR-1 private IP
+#                   port 2222 from MIRROR-2 private IP
+#   Allow outbound: all (gallery-dl needs internet)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  master-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.master
+    image: minibooru-master:latest
+    container_name: minibooru-master
+    hostname: master-node
+
+    ports:
+      # Admin UI — only your own IP should reach this (enforce with DO firewall).
+      - "127.0.0.1:8080:80"
+      # SSH for rsync_pull (mirrors pull individual files for self-healing).
+      # Host port 2222 avoids conflict with the droplet's own SSH on port 22.
+      - "2222:22"
+
+    volumes:
+      - ./:/var/www/shimmie
+      - vendor_cache:/var/www/shimmie/vendor
+      - ./master_data:/var/www/shimmie/data
+      - ./ssh_keys/id_archive:/root/.ssh/id_archive
+      - ./ssh_keys/authorized_keys:/root/.ssh/authorized_keys
+      - ./scripts:/opt/scripts
+
+    environment:
+      DATABASE_DSN: "sqlite:/var/www/shimmie/data/shimmie.sqlite"
+      # ── Fill in the DO VPC private IPs of mirror-1 and mirror-2 droplets ───
+      RSYNC_MIRRORS: "10.YOUR.MIRROR1.IP,10.YOUR.MIRROR2.IP"
+      RSYNC_INTERVAL: "30"
+      # Mirror containers expose SSH on host port 2222 (avoids conflict with droplet SSH).
+      RSYNC_SSH_PORT: "2222"
+
+    entrypoint: ["/entrypoint.master.sh"]
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  vendor_cache:

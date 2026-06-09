@@ -109,9 +109,10 @@ RUN mkdir -p \
 WORKDIR /var/www/shimmie
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# ── Integrity audit script ────────────────────────────────────────────────────
+# ── Integrity audit + self-healing scripts ───────────────────────────────────
 COPY scripts/integrity_audit.py /opt/scripts/integrity_audit.py
-RUN chmod 700 /opt/scripts/integrity_audit.py
+COPY scripts/rsync_pull.sh      /opt/scripts/rsync_pull.sh
+RUN chmod 700 /opt/scripts/integrity_audit.py /opt/scripts/rsync_pull.sh
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 COPY entrypoint.mirror.sh /entrypoint.mirror.sh

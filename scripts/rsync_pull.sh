@@ -66,7 +66,8 @@ LOCAL_DIR="$(dirname "${LOCAL_PATH}")"
 mkdir -p "${LOCAL_DIR}"
 
 # ── SSH options ────────────────────────────────────────────────────────────────
-SSH_OPTS="-i ${SSH_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+RSYNC_SSH_PORT="${RSYNC_SSH_PORT:-22}"
+SSH_OPTS="-i ${SSH_KEY} -p ${RSYNC_SSH_PORT} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 -o LogLevel=ERROR -o ConnectTimeout=10 -o BatchMode=yes"
 
 echo "[${TIMESTAMP}] [INFO] rsync_pull: '${MD5_HASH}' ← ${MASTER_HOST}" \
