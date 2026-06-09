@@ -44,7 +44,7 @@ services:
     environment:
       DATABASE_DSN: "sqlite:/var/www/shimmie/data/shimmie.sqlite"
       # ── Fill in the DO VPC private IPs of mirror-1 and mirror-2 droplets ───
-      RSYNC_MIRRORS: "10.YOUR.MIRROR1.IP,10.YOUR.MIRROR2.IP"
+      RSYNC_MIRRORS: "10.104.0.3,10.104.0.4"
       RSYNC_INTERVAL: "30"
       # Mirror containers expose SSH on host port 2222 (avoids conflict with droplet SSH).
       RSYNC_SSH_PORT: "2222"

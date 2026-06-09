@@ -42,7 +42,7 @@ services:
     environment:
       DATABASE_DSN: "sqlite:/var/www/shimmie/data/shimmie.sqlite"
       # ── Fill in the DO VPC private IP of the master droplet ─────────────────
-      MASTER_HOST: "10.YOUR.MASTER.IP"
+      MASTER_HOST: "10.104.0.2"
       # Must match host port mapping above — used by rsync_pull.sh for self-healing.
       RSYNC_SSH_PORT: "2222"
 
