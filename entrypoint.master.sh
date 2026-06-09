@@ -80,6 +80,7 @@ chmod 664 /var/log/rsync_audit.log 2>/dev/null || true
 # ── Auto-sync daemon ──────────────────────────────────────────────────────────
 # Pushes data to all configured mirrors every $RSYNC_INTERVAL seconds.
 # Only started when RSYNC_MIRRORS is non-empty (set in docker-compose.yml).
+chmod +x /opt/scripts/*.sh 2>/dev/null || true
 DAEMON="/opt/scripts/rsync_push_daemon.sh"
 if [ -n "${RSYNC_MIRRORS:-}" ]; then
     if [ -f "${DAEMON}" ]; then
