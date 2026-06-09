@@ -10,9 +10,9 @@ class GalleryDlIngest extends Extension
     /** @var GalleryDlIngestTheme */
     protected Themelet $theme;
 
-    private const GALLERY_DL_BIN  = 'gallery-dl';
-    private const YTDLP_BIN       = 'yt-dlp';
-    private const SINGLEFILE_BIN  = 'single-file';
+    private const GALLERY_DL_BIN  = '/usr/local/bin/gallery-dl';
+    private const YTDLP_BIN       = '/usr/local/bin/yt-dlp';
+    private const SINGLEFILE_BIN  = '/usr/local/bin/single-file';
     private const CHROMIUM_BIN    = '/usr/bin/chromium';
     private const INGEST_TMP_BASE = '/tmp/ingest';
     private const BG_STATUS_FILE  = '/tmp/minibooru_bg_jobs.json';
@@ -288,17 +288,22 @@ class GalleryDlIngest extends Extension
                 $dl_output = $this->run_singlefile($raw_url, $tmp_dir, $format);
             } else {
                 // Auto: gallery-dl → yt-dlp → singlefile
-                // In auto mode cascade on ANY gallery-dl failure — not just exit 64.
-                // Sites like Facebook have an extractor but still fail (login required,
-                // share-link format, etc.) and return exit 1, not 64.
+                // Cascade on ANY failure OR on exit 0 with no files downloaded
+                // (gallery-dl/yt-dlp may "succeed" silently on unsupported URLs).
                 $engine = 'gallery-dl';
                 try {
                     $dl_output = $this->run_gallery_dl($raw_url, $tmp_dir);
+                    if (!$this->directory_has_files($tmp_dir)) {
+                        throw new \RuntimeException("gallery-dl succeeded but downloaded no files.");
+                    }
                 } catch (\RuntimeException $e) {
                     Log::info('gallerydl_ingest', "gallery-dl failed ({$e->getMessage()}) — trying yt-dlp.");
                     $engine = 'yt-dlp';
                     try {
                         $dl_output = $this->run_ytdlp($raw_url, $tmp_dir);
+                        if (!$this->directory_has_files($tmp_dir)) {
+                            throw new \RuntimeException("yt-dlp succeeded but downloaded no files.");
+                        }
                     } catch (\RuntimeException $ytdlp_err) {
                         Log::info('gallerydl_ingest', "yt-dlp failed ({$ytdlp_err->getMessage()}) — archiving with SingleFile.");
                         $engine    = 'singlefile';
@@ -372,7 +377,7 @@ class GalleryDlIngest extends Extension
     private function run_singlefile(string $url, string $output_dir, string $format = 'pdf'): array
     {
         $chromium = self::CHROMIUM_BIN;
-        if (!file_exists($chromium)) {
+        if (!is_executable($chromium)) {
             throw new \RuntimeException(
                 "SingleFile requires Chromium ({$chromium}) — rebuild the Docker image with Chromium installed."
             );
@@ -439,6 +444,10 @@ class GalleryDlIngest extends Extension
     /** @return list<string> stdout/stderr lines from gallery-dl */
     private function run_gallery_dl(string $url, string $output_dir): array
     {
+        if (!is_executable(self::GALLERY_DL_BIN)) {
+            throw new \RuntimeException("gallery-dl binary not found at " . self::GALLERY_DL_BIN);
+        }
+
         $safe_dir = escapeshellarg($output_dir);
         $safe_url = escapeshellarg($url);
 
@@ -474,6 +483,10 @@ class GalleryDlIngest extends Extension
     /** @return list<string> stdout/stderr lines from yt-dlp */
     private function run_ytdlp(string $url, string $output_dir): array
     {
+        if (!is_executable(self::YTDLP_BIN)) {
+            throw new \RuntimeException("yt-dlp binary not found at " . self::YTDLP_BIN);
+        }
+
         $safe_dir = escapeshellarg($output_dir);
         $safe_url = escapeshellarg($url);
 
