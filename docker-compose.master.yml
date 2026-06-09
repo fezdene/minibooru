@@ -27,8 +27,7 @@ services:
     hostname: master-node
 
     ports:
-      # Admin UI — exposed publicly; DO firewall restricts to your IP only.
-      - "8080:80"
+      - "80:80"
       # SSH for rsync_pull (mirrors pull individual files for self-healing).
       # Host port 2222 avoids conflict with the droplet's own SSH on port 22.
       - "2222:22"
