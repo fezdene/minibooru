@@ -69,7 +69,7 @@ chmod -R 755 /var/www/shimmie/data
 
 # ── Audit log ─────────────────────────────────────────────────────────────────
 touch /var/log/rsync_audit.log
-chmod 640 /var/log/rsync_audit.log
+chmod 644 /var/log/rsync_audit.log
 
 # ── SSH daemon ────────────────────────────────────────────────────────────────
 echo "[entrypoint.mirror(${NODE_LABEL})] Starting SSH daemon..."
@@ -77,7 +77,7 @@ echo "[entrypoint.mirror(${NODE_LABEL})] Starting SSH daemon..."
 echo "[entrypoint.mirror(${NODE_LABEL})] sshd started."
 
 # ── Integrity audit cron job ──────────────────────────────────────────────────
-CRON_JOB="*/5 * * * * /usr/bin/python3 /opt/scripts/integrity_audit.py >> /var/log/rsync_audit.log 2>&1"
+CRON_JOB="*/15 * * * * /usr/bin/python3 /opt/scripts/integrity_audit.py >> /var/log/rsync_audit.log 2>&1 && chmod 644 /var/log/rsync_audit.log"
 ( crontab -l 2>/dev/null | grep -qF "integrity_audit.py" ) \
     || ( crontab -l 2>/dev/null; echo "${CRON_JOB}" ) | crontab -
 echo "[entrypoint.mirror(${NODE_LABEL})] Integrity audit cron job registered."
