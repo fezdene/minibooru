@@ -120,7 +120,7 @@ class GalleryDlIngest extends Extension
             return;
         }
 
-        set_time_limit(0);
+        Ctx::$event_bus->set_timeout(null);
         Ctx::$database->set_timeout(null);
         $job_id = 'ingest_' . bin2hex(random_bytes(4));
         $host   = parse_url($raw_url, PHP_URL_HOST) ?: 'unknown';
@@ -196,7 +196,7 @@ class GalleryDlIngest extends Extension
 
         $fmt = ((string)($row['ingest_format'] ?? 'pdf')) === 'html' ? 'html' : 'pdf';
         $eng = $this->safe_engine((string)($row['ingest_engine'] ?? 'auto'));
-        set_time_limit(0);
+        Ctx::$event_bus->set_timeout(null);
         Ctx::$database->set_timeout(null);
         $job_id = 'ingest_q' . $id;
         $host   = parse_url((string)$row['url'], PHP_URL_HOST) ?: 'unknown';
