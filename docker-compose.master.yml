@@ -27,13 +27,10 @@ services:
     hostname: master-node
 
     ports:
-      - "80:80"
-      # SSH for rsync_pull (mirrors pull individual files for self-healing).
-      # Host port 2222 avoids conflict with the droplet's own SSH on port 22.
+      - "8080:80"
       - "2222:22"
 
     volumes:
-      # Code is baked into the image on cloud — no bind mount needed.
       - ./master_data:/var/www/shimmie/data
       - ./ssh_keys/id_archive:/root/.ssh/id_archive
       - ./ssh_keys/authorized_keys:/root/.ssh/authorized_keys
